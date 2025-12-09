@@ -14,7 +14,7 @@ def calculate_pole_end_height(state):
     
     # 从状态中获取杆子角度（弧度）
     # CartPole中的角度是相对于垂直向上的角度
-    pole_angle = state[2]  # 弧度
+    pole_angle = state[2]*4  # 弧度
     
     # 计算杆子末端的y坐标
     # 当杆子垂直时，高度为1.0，当杆子水平时，高度为0.0
@@ -25,10 +25,19 @@ def calculate_pole_end_height(state):
 
 def calculate_height_increase(prev_state, current_state):
     """计算高度增加（非负）"""
-    prev_height = calculate_pole_end_height(prev_state)
-    current_height = calculate_pole_end_height(current_state)
-    height_increase = max(0.0, current_height - prev_height)
+    # prev_height = calculate_pole_end_height(prev_state)
+    # current_height = calculate_pole_end_height(current_state)
+    height_increase = 0.0
+    if prev_state[2] > 0.12:
+        height_increase = min(0.0, current_state[2]-prev_state[2])
+    elif prev_state[2] < -0.12:
+        height_increase = max(0.0, current_state[2]-prev_state[2])
+    # height_increase = max(0.0, current_height - prev_height)
     return height_increase
+
+def normalize_angle(angle):
+    """将角度归一化到[-π, π]区间"""
+    return (angle + math.pi) % (2 * math.pi) - math.pi
 
 # ==================== 自定义Transformer层（返回注意力权重）====================
 class TransformerEncoderLayerWithAttention(nn.Module):
@@ -182,8 +191,19 @@ class CartPoleTrainer:
         
         # 训练计数器
         self.train_counter = 0
-        self.update_target_every = 10  # 每100步更新一次目标网络
+        self.update_target_every = 1  # 每100步更新一次目标网络
+
         
+    def normalize_state(self, state):
+        """在线更新状态统计并归一化"""
+        # 更新统计
+        state[0] /= 10
+        state[1] /= 3
+        state[2] /= 4
+        state[3] /= 10
+        
+        return state
+    
     def action_to_onehot(self, action):
         """将动作转换为one-hot编码"""
         onehot = np.zeros(2)
@@ -199,13 +219,17 @@ class CartPoleTrainer:
             # 随机动作填充
             action = self.env.action_space.sample()
             next_state, reward, terminated, truncated, _ = self.env.step(action)
-            
+            next_state[2] = normalize_angle(next_state[2])
             # 计算高度增加
             height_increase = calculate_height_increase(state, next_state)
+            next_state_norm = self.normalize_state(next_state)
+            
+            
+            
             
             # 存储到历史
             self.history_buffer.append({
-                'state': state.copy(),
+                'state': next_state_norm.copy(),
                 'action': self.action_to_onehot(action),
                 'height_increase': height_increase
             })
@@ -220,8 +244,9 @@ class CartPoleTrainer:
     def select_action_with_temperature(self, future_attn_scores):
         """使用带温度的softmax选择动作"""
         # 温度与预测误差成反比：误差大则温度高，探索多
-        temp = max(0.1, min(5.0, self.last_pred_error))
-        
+        # temp = max(0.1, min(5.0, self.last_pred_error))
+        # temp = max(0.1, 1.0 / (self.last_pred_error + 1e-8))
+        temp = max(0.1, min(5.0, self.last_pred_error * 10000))
         # 计算softmax概率
         probs = F.softmax(future_attn_scores / temp, dim=-1)
         probs_np = probs.detach().cpu().numpy()
@@ -246,7 +271,7 @@ class CartPoleTrainer:
         attn_to_action = last_layer_attn[0, -1, action_idx_in_seq].item()
         return attn_to_action
     
-    def run_target_model_simulation(self, start_seq, chosen_action_idx):
+    def run_target_model_simulation(self, start_seq, chosen_action_idx, last_state):
         """运行冻结模型模拟未来10步，计算目标注意力分数"""
         total_attn = 0.0
         current_seq = start_seq.copy()  # 复制起始序列
@@ -259,31 +284,50 @@ class CartPoleTrainer:
             seq_tensor = torch.FloatTensor(current_seq).unsqueeze(0)  # (1, seq_len, 7)
             
             # 冻结模型前向传播（返回注意力权重）
-            _, _, _, all_attn_weights = self.target_model(seq_tensor, return_attn_weights=True)
+            future_scores, _, _, all_attn_weights = self.target_model(seq_tensor, return_attn_weights=True)
             
             # 获取当前步对目标动作的注意力
             attn = self.get_attention_to_action(all_attn_weights, target_action_idx)
             total_attn += attn
             
             # 冻结模型选择下一步动作（用于继续模拟）
-            future_scores, _, _ = self.target_model(seq_tensor)
+            # future_scores, _, _ = self.target_model(seq_tensor)
+            # breakpoint()
             future_scores_np = future_scores.detach().cpu().numpy().flatten()
-            temp = max(0.1, min(5.0, self.last_pred_error))
+            temp = max(0.1, min(5.0, 100*self.last_pred_error))
             probs = np.exp(future_scores_np / temp) / np.sum(np.exp(future_scores_np / temp))
             next_action = np.random.choice([0, 1], p=probs)
             
             # 用冻结模型预测下一个状态和高度增加
-            _, next_state_pred, height_pred = self.target_model(seq_tensor)
+            if step != 0:
+                last_state = next_state_pred
+            next_state_pred, reward, _, _, _ = self.env.step(next_action)
+            next_state_pred[2] = normalize_angle(next_state_pred[2])
+            height_pred = calculate_height_increase(last_state, next_state_pred)
+            next_state_pred_norm = self.normalize_state(next_state_pred)
+            
+                
+            # 计算高度增加
+            # breakpoint()
+            
+            
+            # # 更新历史缓冲区
+            # self.history_buffer.append({
+            #     'state': next_state.copy(),
+            #     'action': self.action_to_onehot(action),
+            #     'height_increase': height_increase
+            # })
+            # _, next_state_pred, height_pred = self.target_model(seq_tensor)
             
             # 构建下一步的输入
-            next_state_np = next_state_pred.detach().cpu().numpy().flatten()
-            height_np = height_pred.detach().cpu().numpy().flatten()[0]
+            # next_state_np = next_state_pred.detach().cpu().numpy().flatten()
+            # height_np = height_pred.detach().cpu().numpy().flatten()[0]
             
             # 更新序列：移除第一步，添加新的一步
             new_step = np.concatenate([
-                next_state_np,
+                next_state_pred_norm,
                 self.action_to_onehot(next_action),
-                [height_np]
+                [height_pred]
             ])
             
             current_seq = np.vstack([current_seq[1:], new_step])
@@ -296,7 +340,7 @@ class CartPoleTrainer:
         
         return total_attn
     
-    def train_step(self):
+    def train_step(self, last_state):
         """执行一次训练步骤"""
         # 1. 从历史缓冲区构建输入序列
         if len(self.history_buffer) < self.seq_len:
@@ -325,16 +369,20 @@ class CartPoleTrainer:
         # 4. 执行动作，获取真实数据
         # 获取历史中的最后一个状态
         last_data = recent_data[-1]
-        last_state = last_data['state']
+        
         
         # 执行动作
         next_state, reward, terminated, truncated, _ = self.env.step(action)
-        
+        next_state[2] = normalize_angle(next_state[2])
         # 计算真实高度增加
         real_height_increase = calculate_height_increase(last_state, next_state)
+        next_state_norm = self.normalize_state(next_state)
+        
+        
+        last_state = next_state
         
         # 5. 计算状态和高度预测损失
-        next_state_tensor = torch.FloatTensor(next_state).unsqueeze(0)
+        next_state_tensor = torch.FloatTensor(next_state_norm).unsqueeze(0)
         height_tensor = torch.FloatTensor([real_height_increase]).unsqueeze(0)
         
         loss_state = F.mse_loss(state_pred, next_state_tensor)
@@ -352,7 +400,7 @@ class CartPoleTrainer:
         sim_start_seq = np.vstack([input_seq[1:], current_step])  # (seq_len, 7)
         
         # 运行目标模型模拟
-        target_attention = self.run_target_model_simulation(sim_start_seq, self.seq_len - 1)
+        target_attention = self.run_target_model_simulation(sim_start_seq, self.seq_len - 1,next_state)
         
         # 7. 计算注意力分数预测损失
         # 只计算被选择动作的损失
@@ -361,8 +409,8 @@ class CartPoleTrainer:
         loss_attention = F.mse_loss(chosen_action_score, target_attn_tensor)
         
         # 8. 总损失
-        total_loss = loss_state + loss_height + loss_attention
-        
+        total_loss = loss_state + 100*loss_height + loss_attention
+        # print(loss_state , 100*loss_height , loss_attention)
         # 9. 反向传播
         self.optimizer.zero_grad()
         total_loss.backward()
@@ -377,13 +425,13 @@ class CartPoleTrainer:
         })
         
         # 11. 更新温度
-        self.last_pred_error = total_loss.item()
+        self.last_pred_error =  loss_attention.item()
         
         # 12. 更新目标网络
         self.train_counter += 1
         if self.train_counter % self.update_target_every == 0:
             self.target_model.load_state_dict(self.model.state_dict())
-            print(f"Step {self.train_counter}: Updated target model")
+            # print(f"Step {self.train_counter}: Updated target model")
         
         return total_loss.item()
     
@@ -407,9 +455,9 @@ class CartPoleTrainer:
             for step in range(max_steps_per_episode):
                 # 每20步训练一次
                 if step % 20 == 0 and step > 0:
-                    loss = self.train_step()
+                    loss = self.train_step(next_state)
                     # breakpoint()
-                    print(f"Episode {episode}, Step {step}: Loss = {loss:.4f}, Temp = {self.last_pred_error:.2f}")
+                    print(f"Episode {episode}, Step {step}: Loss = {loss:.4f}, Temp = {self.last_pred_error:.4f}")
                 
                 # breakpoint()
                 
@@ -434,21 +482,26 @@ class CartPoleTrainer:
                     action = self.env.action_space.sample()
                 
                 # 执行动作
-                last_state = self.history_buffer[-1]['state'] if self.history_buffer else state
+                last_state = state
                 next_state, reward, _, _, _ = self.env.step(action)
-                
+                next_state[2] = normalize_angle(next_state[2])
                 # 计算高度增加
                 height_increase = calculate_height_increase(last_state, next_state)
+                next_state_norm = self.normalize_state(next_state)
+                
+                
+                # breakpoint()
+                
                 
                 # 更新历史缓冲区
                 self.history_buffer.append({
-                    'state': next_state.copy(),
+                    'state': next_state_norm.copy(),
                     'action': self.action_to_onehot(action),
                     'height_increase': height_increase
                 })
+                state = next_state
                 
                 episode_reward += reward
-                state = next_state
                 
                 if terminated or truncated:
                     break
@@ -460,6 +513,10 @@ class CartPoleTrainer:
             if len(episode_rewards) >= 10 and np.mean(episode_rewards[-10:]) >= 495:
                 print(f"Solved at episode {episode}!")
                 break
+
+            if episode%200==0:
+                torch.save(self.model.state_dict(), f"cartpole_attention_predictor-{episode}-{self.last_pred_error}.pth")
+                print("Model saved to cartpole_attention_predictor.pth")
         
         self.env.close()
         return episode_rewards
@@ -474,8 +531,7 @@ if __name__ == "__main__":
     trainer = CartPoleTrainer()
     
     # 开始训练
-    rewards = trainer.train(num_episodes=2000, max_steps_per_episode=500)
+    rewards = trainer.train(num_episodes=5000, max_steps_per_episode=500)
     
     # 保存模型
-    torch.save(trainer.model.state_dict(), "cartpole_attention_predictor.pth")
-    print("Model saved to cartpole_attention_predictor.pth")
+   
