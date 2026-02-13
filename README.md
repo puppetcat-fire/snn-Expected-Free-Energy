@@ -1,5 +1,5 @@
 # snn-Expected-Free-Energy
-基础实验验证已完成。
+基础实验验证已完成，直接跑new2026_7.py。
 
 
 
