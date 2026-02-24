@@ -1,5 +1,6 @@
 # snn-Expected-Free-Energy
-基础实验验证已完成，直接跑new2026_7.py。
+基础实验验证已完成，直接跑new2026_7.py。扩展到更复杂场景：
+<img width="676" height="425" alt="image" src="https://github.com/user-attachments/assets/692884b7-f354-46c7-aecf-a1cdd4fe844a" />
 
 
 
