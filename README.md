@@ -1,213 +1,253 @@
-# snn-Expected-Free-Energy
-基础实验验证已完成，直接跑new2026_7.py。扩展到更复杂场景：
-更复杂场景试了几个场景，都不能直接用，下一次集中更新等到明年春节吧。。。
+# Future Attention and Expected Free Energy
 
+## Chinese
 
+### 项目简介
 
-  ## 预期自由能+snn，随便了，如果以大模型的术语来说，就是，我此刻是否选择行动，是以这个行动会不会被后续节点注意到，注意到多少，为依据。尽可能多的选会被后续token计算中注意到的行为，最大化这个被注意程度，不过是snn版。
+本仓库研究一个收缩后的核心问题：
 
-![微信图片_20251210093208_43_109](https://github.com/user-attachments/assets/e08eefa1-7352-43b6-8cb5-ffdd07887e93)
+在一个固定的 Transformer world model 中，是否可以用未来自注意力定义一个 Future Attention (FA) 信号，并检验它与 Expected Free Energy (EFE) 在动作排序上的关系。
 
+当前版本不主张 `FA = EFE`。更准确的目标是：
 
-  ## 人工生命需要完成的事
-    人工生命可以视为是一团可以在变化的环境中维持自身存在的集体，而无法维持存在<能维持存在（在变化到达边界时再处理）<预先切换边界状态以使得变化发生时，自身改动最小化。
-    （等到事情发生时再反应和能够预先做准备，能完成的事是不一样的，可以说后者有着压倒性的存在优势）
-  这就引出了预测的需要，预测的需要要求生命能够预测全部边界的下一刻的变化（对于snn来说，就是一固定输入的下一个激活）（整个预测系统是为之服务的）（生命内外存在边界，而唯一能确定的就是下一刻生命所需要处理的实际外部输入，除此之外再无内外部交互可言）。
-  
-    而对于snn来说，则就是固定输入宽度的信息流，不断更改内部结构和连接去拟合这个信息流输入的过程。
-  而有些条件是无法单纯通过调整内部认知改变的（例如，你无法靠认知说服自己不饿，血糖值的变化，酮症的出现，它们需要进食行为来更迭。）
-  而对于snn来说，就是一个行动节点能在什么上下文中干预多少节点（或者说对多少的节点的预测提供多少比例的比重，把这个比重，收集起来，然后回传到上下文节点中去，利用双指数函数先增后减来拟合这个比重参数，然后有了稳定的比重参数，就在前置节点激活之后去用带热量的sofmax函数计算，热量又恰好能跟分数准确率挂钩，最后分数越高的行为会被选中，这一定程度上又是符合预期自由能原理的。）
-  这里还有一个认识是，一个节点激活前，一定有一组节点与之相关，导致了它的激活，这可能跟llm的上下文是极为相似的，但是不同的是，这回的上下文隐藏在诸多节点之中（这里面肯定有环！！！但是环的训练估计要粗粒化，数学推导估计是个大工程）。
-  这里就又涉及到了条件反射的建立（我是这样想的，一开始的婴儿是会自动的吮吸，而知识随着网络的深度不断增加而逐渐建立，逐渐前移到咀嚼，前移到烹饪，前移到甚至上班，学习等）
-  
-    这个过程中还有个感知是，对于那些需要维持一定水平的参数，它即服从外界感知（血糖水平），又受行为和环境影响。把每个水平的变化反过来找到其原因，这些原因中有行动节点的干预，从而反向的向行动节点提供分数，这个分数又会散到snn网络中去。
-  整体架构就搭起来了。
-  
-  （变化的功能才能承载变化的结构，一群节点的初始连接可能不固定，但是它们都受一定的边界输入信息流的约束）
-  
-  
-  补档：两跳和多跳其实可以直接延用当前行动节点的训练逻辑(区别在于，内部节点激活不会直接导致行为发生)，那么剩下的就是数学上保持原有特性不变，然后尝试做运算上的替换了或者直接硬件上去做一些优化了。现在的架构整体上对计算的压力还是太大了。
-# CartPole Transformer Attention Predictor
+- 用真实 world model 的未来 self-attention 定义 `oracle FA`
+- 训练一个轻量 `FA predictor` 去近似该信号
+- 在可精确计算 `Exact EFE` 的小型 POMDP 中比较两者的动作选择
+- 研究闭环更新下，FA 是否能形成有功能的行为，以及何时会发生自我带偏
 
-一个基于Transformer架构的强化学习实验，通过预测动作在未来获得的"注意力权重"来学习控制CartPole-v1环境。
+### 当前主实验
 
-## 核心思想
+主实验脚本：
 
-本项目不同于传统的策略梯度或Q-learning方法，提出了一种新颖的学习范式：
-- **不直接预测动作**，而是预测每个动作在未来时间步中会获得的"注意力权重"
-- 使用Transformer的自注意力机制量化一个决策对后续决策的影响
-- 通过预测误差动态调整探索-利用权衡（温度调度）
-- 同时学习环境动态（状态预测）和任务目标（保持杆子直立）
+- `real_attention_fa_experiment.py`
 
-## 模型架构
+该脚本包含：
 
-### 输入表示
-每步输入为7维向量：
-- 4维：CartPole状态 `[车位置, 车速, 杆角度, 杆角速度]`
-- 2维：动作one-hot编码 `[左, 右]`
-- 1维：杆子高度增加（非负）
+- 固定的 causal Transformer world model
+- 从真实未来自注意力中抽取 `oracle FA`
+- 学习型 `FA predictor`
+- `Exact EFE` 基线
+- 闭环实验：`policy -> data -> oracle FA -> predictor -> new policy`
 
-序列长度：10步历史
+### 实验环境
 
-### Transformer编码器
-- **输入投影层**：7维 → 128维
-- **位置编码**：正弦位置编码
-- **Transformer层**：3层，8头注意力，512维前馈网络
-- **输出头1**：预测未来注意力分数（2维，对应左右动作）
-- **输出头2**：预测下一状态和高度增加（5维：4状态 + 1高度增加）
+实验不是语言模型任务，而是一个小型稳态 POMDP：
 
-### 注意力权重计算
-模型的核心创新在于"注意力权重分数"的概念：
-- 每个动作被选择后，会在未来10步中被后续决策"关注"
-- 这种关注程度通过Transformer的注意力矩阵量化
-- 具体计算：未来每一步中，当前预测位置对动作所在位置的注意力权重
+- 隐状态：资源点 `rich / barren`
+- 观测：`(energy, cue)`
+- 动作：`eat / inspect / move / wait`
+- 偏好：维持能量处于安全区间
+- 可见性：`full / partial / hard_partial`
 
-## 训练算法
+设计这个环境的原因是：
 
-### 双模型架构
-1. **主模型（训练模型）**：不断更新，用于预测和选择动作
-2. **目标模型（冻结模型）**：定期从主模型同步，用于计算目标注意力分数
+- 可以精确计算 `Exact EFE`
+- 可以显式控制部分可观测性
+- 可以分析信息采集动作 `inspect` 的作用
 
-### 训练流程（每20步）
-1. **历史收集**：收集最近10步的`(状态, 动作, 高度增加)`三元组
-2. **主模型预测**：
-   - 输入10步历史 → 预测第11步的两个动作注意力分数
-   - 预测第11步的状态和高度增加
-3. **动作选择**：
-   - 使用带温度的softmax根据注意力分数选择动作
-   - 温度 = 最近预测误差（误差大→高温→更多探索）
-4. **环境交互**：执行选择动作，获得真实第11步数据
-5. **目标模型模拟**：
-   - 使用目标模型从第2-11步开始，模拟未来10步
-   - 记录每一步对第11步动作位置的注意力权重
-   - 累加10步的注意力权重作为目标值
-6. **损失计算**：
-   - 状态预测损失（MSE）
-   - 高度增加预测损失（MSE）
-   - 注意力分数损失（仅计算被选择动作的MSE）
-7. **模型更新**：反向传播更新主模型
-8. **目标模型同步**：定期将主模型权重复制到目标模型
+### 当前结论边界
 
-## 环境与设置
+当前代码和结果支持以下较稳妥结论：
 
-### CartPole-v1
-- 状态空间：4维连续
-- 动作空间：2维离散（左/右）
-- 目标：保持杆子直立不倒，最大化存活时间
-- 最大步数：500步
+- 在固定小型 Transformer world model 上，未来 self-attention 可以定义 `oracle FA`
+- `FA predictor` 可以学习该信号
+- 在全可见条件下，FA 与 `Exact EFE` 存在中等对齐
+- 在部分可观测条件下，这种对齐会显著受 rollout policy 和闭环分布漂移影响
 
-### 杆子高度计算
-```python
-def calculate_pole_end_height(state):
-    """计算杆子末端的绝对高度"""
-    pole_length = 1.0  # 杆子长度的一半
-    pole_angle = state[2]  # 杆子角度（弧度）
-    y_end = pole_length * math.cos(pole_angle)  # cos(0)=1垂直, cos(pi/2)=0水平
-    return max(0.0, y_end)
+当前代码不支持以下强结论：
 
-def calculate_height_increase(prev_state, current_state):
-    """计算高度增加（非负）"""
-    return max(0.0, calculate_pole_end_height(current_state) - calculate_pole_end_height(prev_state))
-```
+- `FA = EFE`
+- 真实大模型中的 future self-attention 必然等价于自由能优化
+- 闭环更新一定形成稳定功能
 
-## 关键特性
+### 当前结果摘要
 
-### 1. 探索-利用平衡
-- **动态温度控制**：基于模型预测误差自动调整
-- **误差大** → 温度高 → softmax更均匀 → 更多探索
-- **误差小** → 温度低 → softmax更尖锐 → 更多利用
+当前这版主结果见：
 
-### 2. 注意力权重预测
-- 预测每个动作的"长期影响"
-- 通过Transformer自注意力机制自然实现
-- 提供了一种衡量决策重要性的新方式
+- `full_current_rollout_2seeds.md`
+- `partial_current_rollout_2seeds.md`
+- `partial_entropy_rollout_2seeds.md`
 
-### 3. 多任务学习
-- 同时学习环境动态（状态转移）
-- 学习任务目标（保持杆子高度）
-- 学习决策影响（注意力权重）
+代表性结果：
 
-## 使用方法
+- `full` 条件下，`oracle FA vs Exact EFE` 约为 `70.31±8.85%`
+- `partial` 条件下，`oracle FA vs Exact EFE` 约为 `54.17±7.29%`
+- 在 `partial` 下改用固定 entropy-aware rollout policy，`predictor FA vs Exact EFE` 可到 `57.29±8.33%`，但行为回报下降
 
-### 安装依赖
+这意味着：
+
+- FA 与 EFE 有非平凡对齐
+- 但对齐并不稳健
+- 闭环 rollout policy 会影响 oracle FA 本身
+
+### 主要文件
+
+- `real_attention_fa_experiment.py`: 真实 attention 主实验
+- `FA_PAPER_EXPERIMENT.md`: 数学定义、论文边界、命题与实验方案
+- `ATTENTION_FA_EXPERIMENT_GUIDE.md`: 运行说明
+- `full_current_rollout_2seeds.json/.md`: 全可见主结果
+- `partial_current_rollout_2seeds.json/.md`: 部分可观测主结果
+- `partial_entropy_rollout_2seeds.json/.md`: 部分可观测 + 固定 entropy rollout 对照
+
+### 运行方式
+
+安装依赖：
+
 ```bash
-pip install gymnasium torch numpy
+pip install torch numpy
 ```
 
-### 运行训练
-```python
-# 创建训练器
-trainer = CartPoleTrainer()
+运行一个默认实验：
 
-# 开始训练（2000轮，每轮最多500步）
-rewards = trainer.train(num_episodes=2000, max_steps_per_episode=500)
-
-# 保存模型
-torch.save(trainer.model.state_dict(), "cartpole_attention_predictor.pth")
+```bash
+python real_attention_fa_experiment.py --visibility full --seeds 2 --rounds 2
 ```
 
-### 模型参数
-```python
-d_model = 128       # 模型维度
-nhead = 8          # 注意力头数
-num_layers = 3     # Transformer层数
-dim_feedforward = 512  # 前馈网络维度
-dropout = 0.1      # Dropout率
-seq_len = 10       # 历史序列长度
-future_steps = 10  # 未来预测步数
+运行部分可观测实验：
+
+```bash
+python real_attention_fa_experiment.py --visibility partial --seeds 2 --rounds 2 --oracle-rollout-policy current
 ```
 
-## 训练曲线
+运行固定 entropy rollout 对照：
 
-训练过程中会观察到：
-1. **初期**：模型对环境预测不准，注意力分数预测误差大，温度高，随机探索
-2. **中期**：逐步学习到状态转移模式，开始预测高度增加，注意力分数更准确
-3. **后期**：模型收敛，能准确预测哪些动作有助于保持杆子稳定，注意力集中在关键决策上
-
-## 创新点
-
-1. **注意力权重作为奖励信号**：将Transformer的内部注意力机制作为学习信号
-2. **决策影响量化**：通过注意力权重衡量一个决策对未来的影响
-3. **自监督温度调度**：用预测误差自动控制探索程度
-4. **多目标预测**：同时学习环境动态、任务目标和决策影响
-
-## 文件结构
-```
-├── cartpole_attention.py    # 主训练脚本
-├── README.md                # 说明文档
-├── cartpole_attention_predictor.pth  # 训练好的模型
-└── requirements.txt         # 依赖列表
+```bash
+python real_attention_fa_experiment.py --visibility partial --seeds 2 --rounds 2 --oracle-rollout-policy entropy
 ```
 
-## 局限性
+### 论文定位建议
 
-1. **计算开销**：需要运行两次模型（主模型预测 + 目标模型模拟）
-2. **序列长度限制**：只能考虑最近10步的历史
-3. **注意力解释性**：注意力权重的物理意义需要进一步研究
-4. **环境特定**：目前仅针对CartPole-v1设计
+基于当前结果，更合适的论文定位是：
 
-## 扩展方向
+- 机制验证型论文
+- workshop / short paper / arXiv 预印本
 
-1. **更复杂环境**：扩展到连续控制任务或Atari游戏
-2. **分层注意力**：考虑不同时间尺度的注意力
-3. **元学习**：学习温度调度策略
-4. **多智能体**：在协作或竞争环境中应用注意力预测
+更稳妥的主张应写成：
 
-## 引用
+`attention-defined FA` 是一个由固定 world model 内部未来自注意力定义的内生信号；它可被学习，并在部分条件下与 `Exact EFE` 呈现有限但非平凡的动作排序对齐。
 
-如果您使用此代码或想法，请引用：
+## English
+
+### Overview
+
+This repository studies a narrower and more defensible question:
+
+Given a fixed Transformer world model, can future self-attention define a Future Attention (FA) signal, and how does that signal relate to Expected Free Energy (EFE) in action ranking?
+
+The current project does not claim `FA = EFE`. Its actual goal is to:
+
+- define `oracle FA` from real future self-attention in a world model
+- train a lightweight `FA predictor` to approximate that signal
+- compare FA-based action selection with `Exact EFE` in a small POMDP where EFE is tractable
+- analyze whether FA yields useful behavior in closed loop, and when self-confirming drift appears
+
+### Main Experiment
+
+Main script:
+
+- `real_attention_fa_experiment.py`
+
+The script includes:
+
+- a fixed causal Transformer world model
+- extraction of `oracle FA` from real future self-attention
+- a learned `FA predictor`
+- an `Exact EFE` baseline
+- a closed loop: `policy -> data -> oracle FA -> predictor -> new policy`
+
+### Environment
+
+The benchmark is not a language-model task. It is a small homeostatic POMDP with:
+
+- hidden resource state: `rich / barren`
+- observation: `(energy, cue)`
+- actions: `eat / inspect / move / wait`
+- preference structure: maintain energy within a safe regime
+- visibility conditions: `full / partial / hard_partial`
+
+This environment is used because it allows:
+
+- exact EFE planning
+- explicit control over partial observability
+- direct analysis of epistemic actions such as `inspect`
+
+### What the Current Results Support
+
+The current code and results support the following claims:
+
+- future self-attention in a fixed small Transformer world model can define `oracle FA`
+- a learned `FA predictor` can approximate that signal
+- under full observability, FA shows moderate alignment with `Exact EFE`
+- under partial observability, alignment becomes strongly dependent on rollout policy and closed-loop distribution shift
+
+The current results do not support:
+
+- `FA = EFE`
+- equivalence between future self-attention and free-energy optimization in general large models
+- guaranteed stable function formation in closed loop
+
+### Current Result Snapshot
+
+Main result files:
+
+- `full_current_rollout_2seeds.md`
+- `partial_current_rollout_2seeds.md`
+- `partial_entropy_rollout_2seeds.md`
+
+Representative numbers:
+
+- in `full`, `oracle FA vs Exact EFE` is about `70.31±8.85%`
+- in `partial`, `oracle FA vs Exact EFE` is about `54.17±7.29%`
+- in `partial` with a fixed entropy-aware rollout policy, `predictor FA vs Exact EFE` reaches `57.29±8.33%`, but behavioral return drops
+
+Interpretation:
+
+- FA is non-trivially aligned with EFE
+- the alignment is not robust enough to justify an equivalence claim
+- rollout policy affects oracle FA itself under partial observability
+
+### Key Files
+
+- `real_attention_fa_experiment.py`: real-attention main experiment
+- `FA_PAPER_EXPERIMENT.md`: formal definitions, theory boundary, propositions, and paper framing
+- `ATTENTION_FA_EXPERIMENT_GUIDE.md`: run guide
+- `full_current_rollout_2seeds.json/.md`: full-observability results
+- `partial_current_rollout_2seeds.json/.md`: partial-observability results
+- `partial_entropy_rollout_2seeds.json/.md`: partial-observability entropy-rollout control
+
+### Quick Start
+
+Install dependencies:
+
+```bash
+pip install torch numpy
 ```
-@misc{cartpole_attention_predictor,
-  title={CartPole Transformer Attention Predictor},
-  author={AI Assistant},
-  year={2024},
-  howpublished={GitHub Repository}
-}
+
+Run a default full-observability experiment:
+
+```bash
+python real_attention_fa_experiment.py --visibility full --seeds 2 --rounds 2
 ```
 
+Run a partial-observability experiment:
 
+```bash
+python real_attention_fa_experiment.py --visibility partial --seeds 2 --rounds 2 --oracle-rollout-policy current
+```
 
-只能学到让棍子上升的技巧，然后开始转风车。。。要是有负注意力就好了。。。
-## 许可证
+Run the entropy-aware rollout control:
 
-MIT License
+```bash
+python real_attention_fa_experiment.py --visibility partial --seeds 2 --rounds 2 --oracle-rollout-policy entropy
+```
+
+### Suggested Paper Positioning
+
+Given the current evidence, the most defensible publication format is:
+
+- a mechanism-validation paper
+- a workshop paper, short paper, or arXiv preprint
+
+The safest core claim is:
+
+`attention-defined FA` is an endogenous signal induced by future self-attention in a fixed world model; it is learnable and shows limited but non-trivial alignment with `Exact EFE` under some conditions.
