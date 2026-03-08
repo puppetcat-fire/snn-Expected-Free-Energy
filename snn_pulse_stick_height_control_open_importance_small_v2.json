@@ -1,0 +1,66 @@
+{
+  "config": {
+    "seed": 7,
+    "target_height": 0.92,
+    "target_band": 0.07,
+    "pulse_dim": 20,
+    "hidden_dim": 72,
+    "init_active_hidden": 40,
+    "fa_horizon": 8,
+    "latent_weight": 0.25,
+    "latent_topk": 2,
+    "disturbance_mode": "impulse"
+  },
+  "world_model": {
+    "val_loss": 0.1284782737493515,
+    "val_in_band_bce": 0.3901292085647583,
+    "active_nodes": 47.0,
+    "births": 8.0,
+    "deaths": 1.0,
+    "mean_new_node_importance": 1.165597915649414
+  },
+  "evaluation": {
+    "nominal_prediction_only": {
+      "in_band_rate": 0.22142857142857142,
+      "mean_abs_height_error": 0.6845187160773616,
+      "planner_agreement": 0.5238095238095238,
+      "mean_beta": 1.9150409250333906,
+      "mean_action_entropy": 0.6923957489395879
+    },
+    "nominal_signed_pulse": {
+      "in_band_rate": 0.23214285714285715,
+      "mean_abs_height_error": 0.5423510655553286,
+      "planner_agreement": 0.55,
+      "mean_beta": 1.6430747359310323,
+      "mean_action_entropy": 0.47826619564643136
+    },
+    "nominal_signed_twohop_pulse": {
+      "in_band_rate": 0.2011904761904762,
+      "mean_abs_height_error": 0.6564085430345463,
+      "planner_agreement": 0.5142857142857142,
+      "mean_beta": 1.8319731648088922,
+      "mean_action_entropy": 0.46378936374221436
+    },
+    "stress_prediction_only": {
+      "in_band_rate": 0.1630952380952381,
+      "mean_abs_height_error": 0.7739073641938695,
+      "planner_agreement": 0.5035714285714286,
+      "mean_beta": 1.949575191608719,
+      "mean_action_entropy": 0.6924723717707177
+    },
+    "stress_signed_pulse": {
+      "in_band_rate": 0.22738095238095238,
+      "mean_abs_height_error": 0.5789219061284765,
+      "planner_agreement": 0.5678571428571428,
+      "mean_beta": 1.700046055632688,
+      "mean_action_entropy": 0.4679224594785231
+    },
+    "stress_signed_twohop_pulse": {
+      "in_band_rate": 0.24642857142857144,
+      "mean_abs_height_error": 0.5663254297770408,
+      "planner_agreement": 0.5511904761904762,
+      "mean_beta": 1.717360530658736,
+      "mean_action_entropy": 0.45401023726979733
+    }
+  }
+}

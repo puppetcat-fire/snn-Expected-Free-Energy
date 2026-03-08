@@ -1,0 +1,62 @@
+{
+  "seed": 7,
+  "selection_score": 0.49780077514453613,
+  "world_model": {
+    "val_loss": 0.01978200301527977,
+    "val_height_mae": 0.09235423058271408
+  },
+  "scenario": {
+    "initial_state": {
+      "theta": 0.5831822760110676,
+      "omega": 0.06487917453470549,
+      "left_rise": 0.12357949954898378,
+      "left_decay": 0.06425109762695336,
+      "right_rise": 0.07707739119616999,
+      "right_decay": 0.21522272369084916
+    },
+    "disturbance_preview": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "action_seed": 1830
+  },
+  "rollouts": {
+    "prediction_only": {
+      "in_band_rate": 0.19444444444444445,
+      "mean_abs_height_error": 0.6324763563071157,
+      "mean_beta": 3.088643444482281,
+      "mean_entropy": 0.6836539088898678,
+      "final_height": 0.3686903503121793
+    },
+    "signed_prospective": {
+      "in_band_rate": 0.4305555555555556,
+      "mean_abs_height_error": 0.468558720709779,
+      "mean_beta": 2.9082816947219334,
+      "mean_entropy": 0.2462562676339869,
+      "final_height": 0.8184968072845432
+    },
+    "planner": {
+      "in_band_rate": 0.7361111111111112,
+      "mean_abs_height_error": 0.06959076160643964,
+      "mean_beta": 0.0,
+      "mean_entropy": -1.000088900581841e-12,
+      "final_height": 0.924724920496316
+    }
+  },
+  "png": "C:\\Users\\xiaob\\Documents\\snn-Expected-Free-Energy\\snn_cyclic_stick_height_control_visual.png",
+  "gif": "C:\\Users\\xiaob\\Documents\\snn-Expected-Free-Energy\\snn_cyclic_stick_height_control_visual.gif"
+}

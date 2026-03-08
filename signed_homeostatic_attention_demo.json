@@ -1,0 +1,142 @@
+{
+  "config": {
+    "episodes": 400,
+    "seeds": 3,
+    "episode_horizon": 18,
+    "plan_depth": 4,
+    "attention_horizon": 3,
+    "safe_range": [
+      4,
+      6
+    ],
+    "actions": [
+      "eat",
+      "insulin",
+      "wait"
+    ]
+  },
+  "summary": {
+    "rise_only_attention": {
+      "avg_return": {
+        "mean": -11.907083333333333,
+        "std": 0.058845961817462704
+      },
+      "survival_rate": {
+        "mean": 0.0,
+        "std": 0.0
+      },
+      "safe_step_rate": {
+        "mean": 0.17499493723849793,
+        "std": 0.006199698480277171
+      },
+      "agreement_with_exact": {
+        "mean": 0.3333333333333333,
+        "std": 0.0
+      }
+    },
+    "signed_homeostatic_attention": {
+      "avg_return": {
+        "mean": 24.516666666666666,
+        "std": 0.04134878743351738
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "safe_step_rate": {
+        "mean": 0.862037037037037,
+        "std": 0.0022971548574176257
+      },
+      "agreement_with_exact": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    },
+    "exact_homeostatic_planner": {
+      "avg_return": {
+        "mean": 24.516666666666666,
+        "std": 0.04134878743351738
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "safe_step_rate": {
+        "mean": 0.862037037037037,
+        "std": 0.0022971548574176257
+      },
+      "agreement_with_exact": {
+        "mean": 1.0,
+        "std": 0.0
+      }
+    }
+  },
+  "representative_examples": [
+    {
+      "glucose": 3,
+      "carry": 0,
+      "rise_only_action": "eat",
+      "rise_only_scores": {
+        "eat": 2.333333,
+        "insulin": 0.0,
+        "wait": 0.0
+      },
+      "signed_action": "eat",
+      "signed_scores": {
+        "eat": 1.0,
+        "insulin": -2.193333,
+        "wait": 0.0
+      },
+      "exact_action": "eat",
+      "exact_scores": {
+        "eat": 4.981568,
+        "insulin": -2.85629,
+        "wait": 3.926368
+      }
+    },
+    {
+      "glucose": 5,
+      "carry": 0,
+      "rise_only_action": "eat",
+      "rise_only_scores": {
+        "eat": 2.333333,
+        "insulin": 0.0,
+        "wait": 0.0
+      },
+      "signed_action": "wait",
+      "signed_scores": {
+        "eat": -1.333333,
+        "insulin": -1.333333,
+        "wait": 0.0
+      },
+      "exact_action": "wait",
+      "exact_scores": {
+        "eat": 3.700023,
+        "insulin": 3.700023,
+        "wait": 4.920823
+      }
+    },
+    {
+      "glucose": 7,
+      "carry": 0,
+      "rise_only_action": "eat",
+      "rise_only_scores": {
+        "eat": 2.193333,
+        "insulin": 0.0,
+        "wait": 0.0
+      },
+      "signed_action": "insulin",
+      "signed_scores": {
+        "eat": -2.193333,
+        "insulin": 1.0,
+        "wait": 0.0
+      },
+      "exact_action": "insulin",
+      "exact_scores": {
+        "eat": -2.85629,
+        "insulin": 4.981568,
+        "wait": 3.926368
+      }
+    }
+  ]
+}

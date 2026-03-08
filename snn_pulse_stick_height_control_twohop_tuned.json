@@ -1,0 +1,61 @@
+{
+  "config": {
+    "seed": 7,
+    "target_height": 0.92,
+    "target_band": 0.07,
+    "pulse_dim": 20,
+    "hidden_dim": 56,
+    "fa_horizon": 8,
+    "latent_weight": 0.25,
+    "latent_topk": 2,
+    "disturbance_mode": "impulse"
+  },
+  "world_model": {
+    "val_loss": 0.07076396048069,
+    "val_in_band_bce": 0.24249565601348877
+  },
+  "evaluation": {
+    "nominal_prediction_only": {
+      "in_band_rate": 0.1762152777777778,
+      "mean_abs_height_error": 0.7618213296199536,
+      "planner_agreement": 0.4861111111111111,
+      "mean_beta": 2.411256720130203,
+      "mean_action_entropy": 0.691389505792815
+    },
+    "nominal_signed_pulse": {
+      "in_band_rate": 0.2717013888888889,
+      "mean_abs_height_error": 0.5121814903087845,
+      "planner_agreement": 0.5989583333333334,
+      "mean_beta": 1.9926045491447442,
+      "mean_action_entropy": 0.40953708609138767
+    },
+    "nominal_signed_twohop_pulse": {
+      "in_band_rate": 0.2560763888888889,
+      "mean_abs_height_error": 0.49732154698976117,
+      "planner_agreement": 0.5868055555555556,
+      "mean_beta": 2.133767067736739,
+      "mean_action_entropy": 0.40394262009447474
+    },
+    "stress_prediction_only": {
+      "in_band_rate": 0.20052083333333334,
+      "mean_abs_height_error": 0.7170231622960247,
+      "planner_agreement": 0.5182291666666666,
+      "mean_beta": 2.3852357474753973,
+      "mean_action_entropy": 0.6917733620096974
+    },
+    "stress_signed_pulse": {
+      "in_band_rate": 0.2526041666666667,
+      "mean_abs_height_error": 0.5101210962388092,
+      "planner_agreement": 0.6119791666666666,
+      "mean_beta": 2.0712484234284303,
+      "mean_action_entropy": 0.41530907630843766
+    },
+    "stress_signed_twohop_pulse": {
+      "in_band_rate": 0.2630208333333333,
+      "mean_abs_height_error": 0.5362149078694626,
+      "planner_agreement": 0.6032986111111112,
+      "mean_beta": 2.1257430156388892,
+      "mean_action_entropy": 0.4083205966855492
+    }
+  }
+}

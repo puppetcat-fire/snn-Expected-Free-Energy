@@ -1,0 +1,17 @@
+{
+  "world_model": {
+    "val_loss": 0.1284782737493515,
+    "val_in_band_bce": 0.3901292085647583,
+    "active_nodes": 47.0,
+    "births": 8.0,
+    "deaths": 1.0,
+    "mean_new_node_importance": 1.165597915649414
+  },
+  "pulse_bit_accuracy": 0.9174724817276001,
+  "height_bucket_accuracy": 0.7004805207252502,
+  "in_band_bit_accuracy": 0.8231657147407532,
+  "in_band_bce": 0.3901292085647583,
+  "toward_related_bit_accuracy": 0.8724727630615234,
+  "val_samples": 1896,
+  "seq_len": 18
+}

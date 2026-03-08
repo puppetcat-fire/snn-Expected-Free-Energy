@@ -1,0 +1,351 @@
+{
+  "config": {
+    "runs": 1,
+    "offline_episodes": 20,
+    "offline_horizon": 100,
+    "eval_episodes": 4,
+    "eval_horizon": 60,
+    "epochs": 2,
+    "batch_size": 64,
+    "lr": 0.002,
+    "d_model": 64,
+    "n_heads": 4,
+    "n_layers": 2,
+    "dim_ff": 128,
+    "dropout": 0.05,
+    "fa_weight": 0.7,
+    "policy_temperature": 0.08,
+    "offline_noise_mode": "mixed",
+    "world_model_type": "rwkv",
+    "disturbance_mode": "impulse",
+    "offline_high_noise_std": 1.92,
+    "rollout_mode": "repeat",
+    "target_height": 0.9,
+    "target_band": 0.05,
+    "history_steps": 6,
+    "fa_horizon": 4,
+    "device": "cuda",
+    "nominal_noise_std": 1.2,
+    "stress_noise_std": 2.16
+  },
+  "world_model": {
+    "val_loss": {
+      "mean": 0.05310760848224163,
+      "std": 0.0
+    },
+    "val_height_mae": {
+      "mean": 0.11670179152697847,
+      "std": 0.0
+    }
+  },
+  "nominal_policies": {
+    "random": {
+      "in_band_rate": {
+        "mean": 0.06666666666666667,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.7845991778850129,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5208333333333334,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.6931471805599453,
+        "std": 0.0
+      }
+    },
+    "prediction_only": {
+      "in_band_rate": {
+        "mean": 0.05,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.816255549519358,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5416666666666666,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.5663216243707505,
+        "std": 0.0
+      }
+    },
+    "positive_fa": {
+      "in_band_rate": {
+        "mean": 0.05,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.816255549519358,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5416666666666666,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.5656159348018055,
+        "std": 0.0
+      }
+    },
+    "signed_semantic_fa": {
+      "in_band_rate": {
+        "mean": 0.05,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.816255549519358,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5416666666666666,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.5653292447221675,
+        "std": 0.0
+      }
+    },
+    "planner": {
+      "in_band_rate": {
+        "mean": 0.175,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.7541825159252961,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.0,
+        "std": 0.0
+      }
+    }
+  },
+  "stress_policies": {
+    "random": {
+      "in_band_rate": {
+        "mean": 0.12083333333333333,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.7333178089354707,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5291666666666667,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.6931471805599453,
+        "std": 0.0
+      }
+    },
+    "prediction_only": {
+      "in_band_rate": {
+        "mean": 0.12083333333333333,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.7218148195168105,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5416666666666666,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.5220400331091472,
+        "std": 0.0
+      }
+    },
+    "positive_fa": {
+      "in_band_rate": {
+        "mean": 0.12083333333333333,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.7218148195168105,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5416666666666666,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.5210197089089261,
+        "std": 0.0
+      }
+    },
+    "signed_semantic_fa": {
+      "in_band_rate": {
+        "mean": 0.12083333333333333,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.7218148195168105,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 0.5416666666666666,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.5205903188725565,
+        "std": 0.0
+      }
+    },
+    "planner": {
+      "in_band_rate": {
+        "mean": 0.4666666666666667,
+        "std": 0.0
+      },
+      "survival_rate": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_abs_height_error": {
+        "mean": 0.5166061377499072,
+        "std": 0.0
+      },
+      "planner_agreement": {
+        "mean": 1.0,
+        "std": 0.0
+      },
+      "mean_episode_length": {
+        "mean": 60,
+        "std": 0.0
+      },
+      "mean_action_entropy": {
+        "mean": 0.0,
+        "std": 0.0
+      }
+    }
+  },
+  "representative_cases": [
+    {
+      "x": -0.2,
+      "x_dot": 0.15,
+      "theta": -0.6010268117962624,
+      "theta_dot": 0.4,
+      "height": 0.8247553983660518,
+      "planner_action": "left",
+      "prediction_only_action": "right",
+      "positive_fa_action": "right",
+      "signed_semantic_fa_action": "right"
+    },
+    {
+      "x": 0.0,
+      "x_dot": 0.0,
+      "theta": 0.45102681179626236,
+      "theta_dot": 0.0,
+      "height": 0.9,
+      "planner_action": "right",
+      "prediction_only_action": "right",
+      "positive_fa_action": "right",
+      "signed_semantic_fa_action": "right"
+    },
+    {
+      "x": 0.35,
+      "x_dot": -0.25,
+      "theta": 0.5710268117962624,
+      "theta_dot": -0.55,
+      "height": 0.8413464308804204,
+      "planner_action": "right",
+      "prediction_only_action": "right",
+      "positive_fa_action": "right",
+      "signed_semantic_fa_action": "right"
+    },
+    {
+      "x": -0.55,
+      "x_dot": 0.4,
+      "theta": -0.27102681179626237,
+      "theta_dot": 0.35,
+      "height": 0.9634965053561455,
+      "planner_action": "right",
+      "prediction_only_action": "right",
+      "positive_fa_action": "right",
+      "signed_semantic_fa_action": "right"
+    }
+  ]
+}

@@ -49,6 +49,7 @@ DEFAULT_DISCOUNT = 0.85
 FA_TARGET_HORIZON = 4
 FA_TARGET_DISCOUNT = 0.82
 DEFAULT_FA_INFO_BONUS = 0.75
+DEFAULT_FA_POLICY_BASE_WEIGHT = 1.25
 
 PAD_ID = 0
 BOS_ID = 1
@@ -478,6 +479,20 @@ def mixed_policy_action(energy: int, belief: float, cfg: VisibilityConfig, rng: 
     return argmin_action(exact_efe_action_scores(energy, belief, cfg))
 
 
+def offline_policy_action(policy_name: str, energy: int, belief: float, cfg: VisibilityConfig, rng: random.Random) -> str:
+    if policy_name == "mixed":
+        return mixed_policy_action(energy, belief, cfg, rng)
+    if policy_name == "random":
+        return rng.choice(ACTIONS)
+    if policy_name == "myopic":
+        return argmax_action(immediate_expected_utility_scores(energy, belief))
+    if policy_name == "exact":
+        return argmin_action(exact_efe_action_scores(energy, belief, cfg))
+    if policy_name == "entropy":
+        return argmax_action(expected_info_gain_scores(energy, belief, cfg))
+    raise ValueError(f"Unknown offline policy: {policy_name}")
+
+
 def simulate_real_step(
     energy: int,
     site_rich: int,
@@ -496,7 +511,12 @@ def simulate_real_step(
     return energy_after, next_site, cue, belief_after, entropy_before, entropy_after
 
 
-def generate_offline_dataset(cfg: VisibilityConfig, episodes: int, seed: int) -> List[OfflineEpisode]:
+def generate_offline_dataset(
+    cfg: VisibilityConfig,
+    episodes: int,
+    seed: int,
+    offline_policy_name: str = "mixed",
+) -> List[OfflineEpisode]:
     rng = random.Random(seed)
     data: List[OfflineEpisode] = []
     for _ in range(episodes):
@@ -509,7 +529,7 @@ def generate_offline_dataset(cfg: VisibilityConfig, episodes: int, seed: int) ->
         for _step in range(EPISODE_HORIZON):
             if energy <= 0:
                 break
-            action = mixed_policy_action(energy, belief, cfg, rng)
+            action = offline_policy_action(offline_policy_name, energy, belief, cfg, rng)
             tokens.append(action_token_id(action))
             energy, site_rich, cue, belief, _e0, _e1 = simulate_real_step(energy, site_rich, belief, action, cfg, rng)
             tokens.append(obs_token_id(energy, cue))
@@ -540,6 +560,7 @@ def train_world_model(
     num_layers: int = 3,
     dim_ff: int = 192,
     dropout: float = 0.1,
+    offline_policy_name: str = "mixed",
 ) -> Tuple[CausalTransformerWorldModel, WorldModelMetrics]:
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -561,7 +582,7 @@ def train_world_model(
         model.eval()
         return model, metrics
 
-    data = generate_offline_dataset(cfg, episodes=offline_episodes, seed=seed)
+    data = generate_offline_dataset(cfg, episodes=offline_episodes, seed=seed, offline_policy_name=offline_policy_name)
     rng = random.Random(seed)
     rng.shuffle(data)
     split = int(0.85 * len(data))
@@ -650,7 +671,7 @@ def predictor_action_scores(world_model: CausalTransformerWorldModel, predictor:
 
 
 class RealAttentionFAPolicy:
-    def __init__(self, world_model: CausalTransformerWorldModel, predictor: FAPredictor, lambda_fa: float, base_weight: float = 1.25, temperature: float = 0.85, epsilon: float = 0.08) -> None:
+    def __init__(self, world_model: CausalTransformerWorldModel, predictor: FAPredictor, lambda_fa: float, base_weight: float = DEFAULT_FA_POLICY_BASE_WEIGHT, temperature: float = 0.85, epsilon: float = 0.08) -> None:
         self.world_model = world_model
         self.predictor = predictor
         self.lambda_fa = lambda_fa
@@ -711,6 +732,7 @@ def train_fa_predictor(
     lr: float,
     seed: int,
     info_bonus_weight: float,
+    oracle_gate_mode: str,
 ) -> None:
     rng = random.Random(seed)
     features_h: List[torch.Tensor] = []
@@ -731,6 +753,7 @@ def train_fa_predictor(
                 rollouts_per_action,
                 rng,
                 info_bonus_weight=info_bonus_weight,
+                gate_mode=oracle_gate_mode,
             )
             features_h.append(hidden)
             features_a.append(action_embs[action_idx].cpu())
@@ -831,6 +854,7 @@ def oracle_fa_from_world_model(
     rng: random.Random,
     info_bonus_weight: float = DEFAULT_FA_INFO_BONUS,
     horizon: int = FA_TARGET_HORIZON,
+    gate_mode: str = "full",
 ) -> float:
     current_energy, _current_cue = decode_obs_token(history_tokens[-1])
     total = 0.0
@@ -860,7 +884,18 @@ def oracle_fa_from_world_model(
             _prior, _obs_probs, posteriors = observation_model(energy_now, belief_now, action_now, cfg)
             belief_next = posteriors.get((next_energy_obs, next_cue_obs), belief_now)
             info_gain = max(0.0, prev_entropy - bernoulli_entropy(belief_next))
-            gate = max(0.0, preference_utility(next_energy_obs)) + info_bonus_weight * info_gain
+            preference_gate = max(0.0, preference_utility(next_energy_obs))
+            info_gate = info_bonus_weight * info_gain
+            if gate_mode == "attention_only":
+                gate = 1.0
+            elif gate_mode == "preference_only":
+                gate = preference_gate
+            elif gate_mode == "info_only":
+                gate = info_gate
+            elif gate_mode == "full":
+                gate = preference_gate + info_gate
+            else:
+                raise ValueError(f"Unknown oracle gate mode: {gate_mode}")
             value += (FA_TARGET_DISCOUNT ** step_idx) * gate * attn_to_action
             energy_now = next_energy_obs
             belief_now = belief_next
@@ -937,6 +972,7 @@ def evaluate_alignment(
     oracle_rollouts: int,
     seed: int,
     info_bonus_weight: float,
+    oracle_gate_mode: str,
 ) -> AlignmentMetrics:
     rng = random.Random(seed)
     abs_errors: List[float] = []
@@ -957,6 +993,7 @@ def evaluate_alignment(
                 oracle_rollouts,
                 rng,
                 info_bonus_weight=info_bonus_weight,
+                gate_mode=oracle_gate_mode,
             )
             for action in ACTIONS
         }
@@ -1043,6 +1080,9 @@ def run_seed(
     lambda_fa: float,
     fa_info_bonus: float,
     oracle_rollout_policy_name: str,
+    oracle_gate_mode: str,
+    policy_base_weight: float,
+    offline_policy_name: str,
     predictor_epochs: int,
     predictor_batch: int,
     benchmark_depth: int,
@@ -1063,6 +1103,7 @@ def run_seed(
         num_layers=world_model_layers,
         dim_ff=world_model_dim_ff,
         dropout=world_model_dropout,
+        offline_policy_name=offline_policy_name,
     )
     predictor = FAPredictor(world_model.d_model).to(DEVICE)
     myopic_policy = MyopicPolicyWrapper()
@@ -1076,7 +1117,14 @@ def run_seed(
     kl_contexts = collect_contexts(myopic_policy, cfg, episodes=20, max_contexts=80, seed=seed + 23)
     for round_idx in range(rounds + 1):
         current_lambda = 0.0 if round_idx == 0 else lambda_fa
-        current_policy = RealAttentionFAPolicy(world_model, predictor, lambda_fa=current_lambda, base_weight=1.25, temperature=0.85, epsilon=max(0.04, 0.10 - 0.01 * round_idx))
+        current_policy = RealAttentionFAPolicy(
+            world_model,
+            predictor,
+            lambda_fa=current_lambda,
+            base_weight=policy_base_weight,
+            temperature=0.85,
+            epsilon=max(0.04, 0.10 - 0.01 * round_idx),
+        )
         oracle_policy = current_policy
         if oracle_rollout_policy_name == 'entropy':
             oracle_policy = entropy_policy
@@ -1095,6 +1143,7 @@ def run_seed(
             oracle_rollouts,
             seed + 100 * round_idx + 7,
             info_bonus_weight=fa_info_bonus,
+            oracle_gate_mode=oracle_gate_mode,
         )
         rounds_out.append(RoundResult(round_idx=round_idx, behavior=behavior, alignment=alignment, policy_kl=policy_kl(world_model, prev_policy, current_policy, kl_contexts)))
 
@@ -1114,6 +1163,7 @@ def run_seed(
             1e-3,
             seed + 100 * round_idx + 17,
             info_bonus_weight=fa_info_bonus,
+            oracle_gate_mode=oracle_gate_mode,
         )
         prev_policy = current_policy
 
@@ -1244,6 +1294,13 @@ def write_markdown_summary(path: str, summary: Dict[str, Dict[str, object]]) -> 
         handle.write('\n'.join(lines))
 
 
+def world_model_checkpoint_name(cfg: VisibilityConfig, d_model: int, layers: int, nhead: int, offline_policy_name: str) -> str:
+    ckpt = f'real_attention_world_model_{cfg.name}_d{d_model}_l{layers}_h{nhead}.pt'
+    if offline_policy_name != 'mixed':
+        return ckpt[:-3] + f'_data-{offline_policy_name}.pt'
+    return ckpt
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description='Real-attention FA experiment with a fixed transformer world model.')
     parser.add_argument('--visibility', type=str, default='all', choices=['all', 'full', 'partial', 'hard_partial'])
@@ -1268,6 +1325,9 @@ def main() -> None:
     parser.add_argument('--predictor-epochs', type=int, default=10)
     parser.add_argument('--predictor-batch', type=int, default=64)
     parser.add_argument('--lambda-fa', type=float, default=1.0)
+    parser.add_argument('--policy-base-weight', type=float, default=DEFAULT_FA_POLICY_BASE_WEIGHT)
+    parser.add_argument('--offline-policy', type=str, default='mixed', choices=['mixed', 'random', 'myopic', 'exact', 'entropy'])
+    parser.add_argument('--oracle-gate-mode', type=str, default='full', choices=['full', 'attention_only', 'preference_only', 'info_only'])
     parser.add_argument('--fa-info-bonus', type=float, default=DEFAULT_FA_INFO_BONUS)
     parser.add_argument('--oracle-rollout-policy', type=str, default='current', choices=['current', 'entropy', 'myopic', 'exact'])
     parser.add_argument('--benchmark-depth', type=int, default=5)
@@ -1282,7 +1342,7 @@ def main() -> None:
     if args.train_world_model_only:
         trained: List[Dict[str, object]] = []
         for cfg_idx, cfg in enumerate(selected_cfgs):
-            ckpt = f'real_attention_world_model_{cfg.name}_d{args.world_model_d_model}_l{args.world_model_layers}_h{args.world_model_nhead}.pt'
+            ckpt = world_model_checkpoint_name(cfg, args.world_model_d_model, args.world_model_layers, args.world_model_nhead, args.offline_policy)
             seed = 202 + cfg_idx * 100
             _world_model, wm_metrics = train_world_model(
                 cfg=cfg,
@@ -1298,6 +1358,7 @@ def main() -> None:
                 num_layers=args.world_model_layers,
                 dim_ff=args.world_model_dim_ff,
                 dropout=args.world_model_dropout,
+                offline_policy_name=args.offline_policy,
             )
             trained.append({'visibility': cfg.name, 'checkpoint': ckpt, 'world_model': wm_metrics.__dict__})
         payload = {'device': str(DEVICE), 'mode': 'train_world_model_only', 'config': vars(args), 'trained': trained}
@@ -1306,7 +1367,7 @@ def main() -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return
     for cfg_idx, cfg in enumerate(selected_cfgs):
-        ckpt = f'real_attention_world_model_{cfg.name}_d{args.world_model_d_model}_l{args.world_model_layers}_h{args.world_model_nhead}.pt'
+        ckpt = world_model_checkpoint_name(cfg, args.world_model_d_model, args.world_model_layers, args.world_model_nhead, args.offline_policy)
         for seed_idx in range(args.seeds):
             seed = 202 + cfg_idx * 100 + seed_idx * 17
             seed_results.append(run_seed(
@@ -1332,6 +1393,9 @@ def main() -> None:
                 lambda_fa=args.lambda_fa,
                 fa_info_bonus=args.fa_info_bonus,
                 oracle_rollout_policy_name=args.oracle_rollout_policy,
+                oracle_gate_mode=args.oracle_gate_mode,
+                policy_base_weight=args.policy_base_weight,
+                offline_policy_name=args.offline_policy,
                 predictor_epochs=args.predictor_epochs,
                 predictor_batch=args.predictor_batch,
                 benchmark_depth=args.benchmark_depth,

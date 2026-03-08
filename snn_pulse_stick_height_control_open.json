@@ -1,0 +1,65 @@
+{
+  "config": {
+    "seed": 7,
+    "target_height": 0.92,
+    "target_band": 0.07,
+    "pulse_dim": 20,
+    "hidden_dim": 72,
+    "init_active_hidden": 40,
+    "fa_horizon": 8,
+    "latent_weight": 0.25,
+    "latent_topk": 2,
+    "disturbance_mode": "impulse"
+  },
+  "world_model": {
+    "val_loss": 0.07461713254451752,
+    "val_in_band_bce": 0.25443321466445923,
+    "active_nodes": 44.0,
+    "births": 8.0,
+    "deaths": 4.0
+  },
+  "evaluation": {
+    "nominal_prediction_only": {
+      "in_band_rate": 0.171875,
+      "mean_abs_height_error": 0.781614886089977,
+      "planner_agreement": 0.4817708333333333,
+      "mean_beta": 2.1856368488248945,
+      "mean_action_entropy": 0.6917500667137952
+    },
+    "nominal_signed_pulse": {
+      "in_band_rate": 0.2387152777777778,
+      "mean_abs_height_error": 0.5490842809482911,
+      "planner_agreement": 0.5789930555555556,
+      "mean_beta": 1.905472603843858,
+      "mean_action_entropy": 0.4318418381778202
+    },
+    "nominal_signed_twohop_pulse": {
+      "in_band_rate": 0.2630208333333333,
+      "mean_abs_height_error": 0.4949975735857585,
+      "planner_agreement": 0.5868055555555556,
+      "mean_beta": 1.8581273288181468,
+      "mean_action_entropy": 0.4200454083130479
+    },
+    "stress_prediction_only": {
+      "in_band_rate": 0.1953125,
+      "mean_abs_height_error": 0.7204615393649227,
+      "planner_agreement": 0.5251736111111112,
+      "mean_beta": 2.3040898036017707,
+      "mean_action_entropy": 0.691899130491739
+    },
+    "stress_signed_pulse": {
+      "in_band_rate": 0.2786458333333333,
+      "mean_abs_height_error": 0.447304911785521,
+      "planner_agreement": 0.6024305555555556,
+      "mean_beta": 1.8791305411434023,
+      "mean_action_entropy": 0.40313715932244654
+    },
+    "stress_signed_twohop_pulse": {
+      "in_band_rate": 0.2456597222222222,
+      "mean_abs_height_error": 0.5206548653343287,
+      "planner_agreement": 0.5642361111111112,
+      "mean_beta": 1.8873886604625216,
+      "mean_action_entropy": 0.4204977738151592
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "selection_score": 0.7862414330477466,
+  "world_model": {
+    "val_loss": 0.1284782737493515,
+    "val_in_band_bce": 0.3901292085647583,
+    "active_nodes": 47.0,
+    "births": 8.0,
+    "deaths": 1.0,
+    "mean_new_node_importance": 1.165597915649414
+  },
+  "scenario": {
+    "initial_state": {
+      "theta": 0.571740498204597,
+      "omega": 0.3325370349352451,
+      "left_rise": 0.18730854144565515,
+      "left_decay": 0.240524445197277,
+      "right_rise": 0.00270457451201136,
+      "right_decay": 0.1001111119009584
+    },
+    "disturbance_preview": [
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      -0.6477450182891943,
+      -0.6477450182891943,
+      -0.6477450182891943,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "action_seed": 3969
+  },
+  "rollouts": {
+    "prediction_only": {
+      "in_band_rate": 0.10714285714285714,
+      "mean_abs_height_error": 0.9791437796449355,
+      "mean_beta": 1.6450992904060222,
+      "mean_entropy": 0.6926276144373333,
+      "final_height": 0.862692188742098
+    },
+    "signed_pulse": {
+      "in_band_rate": 0.25,
+      "mean_abs_height_error": 0.6435024131822823,
+      "mean_beta": 1.9012604406724383,
+      "mean_entropy": 0.488485125796374,
+      "final_height": 0.5015081803961333
+    },
+    "signed_twohop_pulse": {
+      "in_band_rate": 0.2976190476190476,
+      "mean_abs_height_error": 0.4001594195086987,
+      "mean_beta": 1.6691072850355078,
+      "mean_entropy": 0.48235955969695204,
+      "final_height": 0.6363388661755781
+    },
+    "planner": {
+      "in_band_rate": 0.6785714285714286,
+      "mean_abs_height_error": 0.06264329890543827,
+      "mean_beta": 0.0,
+      "mean_entropy": 0.0,
+      "final_height": 0.9908880917154005
+    }
+  },
+  "png": "C:\\Users\\xiaob\\Documents\\snn-Expected-Free-Energy\\snn_pulse_stick_control_visual.png",
+  "gif": "C:\\Users\\xiaob\\Documents\\snn-Expected-Free-Energy\\snn_pulse_stick_control_visual.gif"
+}
